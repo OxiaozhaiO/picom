@@ -376,7 +376,8 @@ bool win_bind_shadow(struct backend_base *b, struct managed_win *w, struct color
 		w->shadow_image = b->ops->render_shadow(b, w->widthb, w->heightb, sctx, c);
 	} else {
 		if (!w->mask_image) {
-			// It's possible we already allocated a mask because of background blur
+			// It's possible we already allocated a mask because of background
+			// blur
 			win_bind_mask(b, w);
 		}
 		w->shadow_image = b->ops->shadow_from_mask(b, w->mask_image, sctx, c);
@@ -1778,12 +1779,11 @@ struct win *add_win_above(session_t *ps, xcb_window_t id, xcb_window_t below) {
 			return NULL;
 		}
 		return add_win_top(ps, id);
-	} else {
-		// we found something from the hash table, so if the stack is
-		// empty, we are in an inconsistent state.
-		assert(!list_is_empty(&ps->window_stack));
-		return add_win(ps, id, w->stack_neighbour.prev);
 	}
+	// we found something from the hash table, so if the stack is
+	// empty, we are in an inconsistent state.
+	assert(!list_is_empty(&ps->window_stack));
+	return add_win(ps, id, w->stack_neighbour.prev);
 }
 
 /// Query the Xorg for information about window `win`
@@ -2777,11 +2777,12 @@ bool win_skip_fading(session_t *ps, struct managed_win *w) {
 // TODO(absolutelynothelix): rename to x_update_win_(randr_?)monitor and move to
 // the x.c.
 void win_update_monitor(struct x_monitors *monitors, struct managed_win *mw) {
-	mw->randr_monitor = -1;
 	for (int i = 0; i < monitors->count; i++) {
 		auto e = pixman_region32_extents(&monitors->regions[i]);
-		if (e->x1 <= mw->g.x && e->y1 <= mw->g.y &&
-		    e->x2 >= mw->g.x + mw->widthb && e->y2 >= mw->g.y + mw->heightb) {
+		if (((e->x1 <= mw->g.x || e->x1 <= mw->pending_g.x) &&
+		    (e->x2 >= mw->g.x + mw->widthb || e->x2 >= mw->pending_g.x + mw->widthb)) &&
+		    (e->y1 <= mw->g.y || e->y1 <= mw->pending_g.y) &&
+		    (e->y2 >= mw->g.y + mw->heightb || e->y2 >= mw->pending_g.y + mw->heightb)) {
 			mw->randr_monitor = i;
 			log_debug("Window %#010x (%s), %dx%d+%dx%d, is entirely on the "
 			          "monitor %d (%dx%d+%dx%d)",
